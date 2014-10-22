@@ -48,7 +48,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>EntryPoint</mainClass>
+                            <mainClass>Start</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
