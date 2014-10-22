@@ -78,7 +78,8 @@ public class RequestProcessor
 
         Set<Index.Data> current = myIndex.get_documents(request.get(0));
 
-        for (int i = 1; i < request.size(); i += 2) {
+        for (int i = 1; i < request.size(); i += 2)
+        {
             Set<Index.Data> next = myIndex.get_documents(request.get(i + 1));
 
             Matcher match = Pattern.compile(DEL).matcher(request.get(i));

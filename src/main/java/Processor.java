@@ -11,7 +11,8 @@ public class Processor
     private RussianMorphology morphology;
     private Index index;
 
-    public Processor(File file) throws IOException {
+    public Processor(File file) throws IOException
+    {
         dir = file;
         morphology = new RussianMorphology();
         index = new Index();
@@ -22,19 +23,20 @@ public class Processor
         File[] files = dir.listFiles();
         if (files == null)
         {
-            index.saveToFile("index.dat");
+            index.save_to_file("index.dat");
             return;
         }
 
-        int current = 0;
+        int processedFiles = 0;
         for (File file : files)
         {
             String content = Files.toString(file, Charset.defaultCharset());
-            content = processContent(content);
+            content = process_content(content);
             String[] words = content.split("\\s+");
 
-            HashSet<String> allTerms = new HashSet<>();
+            Map<String, List<Integer>> allTerms = new HashMap<>();
 
+            int current_position = 0;
             for (String word : words) {
                 word = word.trim();
                 if (word.isEmpty())
@@ -42,25 +44,32 @@ public class Processor
 
                 for (String form : morphology.getNormalForms(word))
                 {
-                    allTerms.add(form);
+                    List<Integer> current;
+
+                    if (!allTerms.containsKey(form))
+                    {
+                        current = new ArrayList<>();
+                        allTerms.put(form, current);
+                    }
+                    else
+                        current = allTerms.get(form);
+                    current.add(current_position);
                 }
+
+                current_position++;
             }
 
-            int number = index.addFile(file.getName());
-            for (String term : allTerms)
-            {
-                index.addWord(term, number);
-            }
+            int number = index.add_file(file.getName());
+            for (Map.Entry<String, List<Integer>> term : allTerms.entrySet())
+                index.add_word(term.getKey(), term.getValue(), number);
 
-            ++current;
-            System.out.println(current + " out of " + files.length);
+            System.out.println(++processedFiles + " out of " + files.length);
         }
 
-
-        index.saveToFile("index.dat");
+        index.save_to_file("index.dat");
     }
 
-    private String processContent(String content)
+    private String process_content(String content)
     {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < content.length(); ++i)

@@ -5,12 +5,9 @@ public class Start
 {
     static final String INDEX = "-index";
     static final String SEARCH = "-search";
-
-    static final String AND = "AND";
-    static final String OR = "OR";
     static final String EXIT = "exit";
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException
+    public static void main(String[] args) throws Exception
     {
         if (args.length == 0)
         {
@@ -43,65 +40,34 @@ public class Start
         processor.process();
     }
 
-    static void search() throws IOException, ClassNotFoundException
+    static void search() throws Exception
     {
         BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
 
         String indexPath = console.readLine();
         Index index = new Index(indexPath);
+        RequestProcessor processor = new RequestProcessor(index);
 
-        while (true) {
+        while (true)
+        {
             String request = console.readLine();
-            Set<String> result = new HashSet<>();
 
             if (request.equals(EXIT))
                 break;
 
-            if (request.contains(AND))
-            {
-                String[] words = request.split(AND);
-
-                boolean isFirst = true;
-                for (String word : words)
-                {
-                    Set<String> docs = index.getDocuments(word.trim());
-
-                    if (isFirst)
-                    {
-                        result = docs;
-                        isFirst = false;
-                    }
-                    else
-                    {
-                        result.retainAll(docs);
-                    }
-                }
-            }
-            else
-            {
-                String[] words = request.split(OR);
-
-                for (String word : words)
-                {
-                    result.addAll(index.getDocuments(word.trim()));
-                }
-            }
+            Set<String> result = processor.process_request(request);
 
             if (result == null)
-            {
-                System.out.println("No files have been found.");
-            }
+                System.out.println("No files were found.");
             else
             {
                 if (result.size() == 0)
-                    System.out.println("No documents have been found");
+                    System.out.println("No documents were found");
                 else
                 {
                     System.out.println("Found " + result.size() + " documents:");
                     for (String num : result)
-                    {
                         System.out.print(num + " ");
-                    }
                     System.out.println();
                 }
             }

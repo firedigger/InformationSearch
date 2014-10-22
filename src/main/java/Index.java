@@ -11,7 +11,8 @@ public class Index implements Serializable
     MyList list;
     int pos;
 
-    public Index() throws FileNotFoundException {
+    public Index() throws FileNotFoundException
+    {
         headers = new HashMap<>(1000);
         files = new ArrayList<>();
         list = new MyList();
@@ -24,51 +25,51 @@ public class Index implements Serializable
         load(filename);
     }
 
-    public int addFile (String filename)
+    public int add_file(String filename)
     {
         int size = files.size();
         files.add(filename);
         return size;
     }
 
-    public void addWord(String word, int value) throws IOException
+    public void add_word(String word, List<Integer> positions, int value) throws IOException
     {
         if (!headers.containsKey(word))
             headers.put(word, new WordInfo());
         WordInfo current = headers.get(word);
 
-        list.at(value);
-        list.at(current.lastPos);
+        int lastPos = current.lastPos;
 
         current.count++;
-        current.lastPos = pos;
+        current.lastPos = list.size();
 
-        pos++;
+        new Data(value, positions).append_to(list);
+        list.push_back(lastPos);
     }
 
-    public Set<String> getDocuments(String word)
-    {
-        WordInfo info = headers.get(word);
-        if (info == null)
+    public Set<Data> get_documents(String word) {
+        WordInfo data = headers.get(word);
+        if (data == null)
             return Collections.emptySet();
 
-        HashSet<String> result = new HashSet<>(info.count);
+        HashSet<Data> result = new HashSet<>(data.count);
 
-        int curPos = info.lastPos;
-        for (int i = 0; i < info.count; ++i)
+        for (int i = 0, curPos = data.lastPos; i < data.count; i++)
         {
-            result.add(files.get(list.at(curPos * 2)));
-            curPos = list.at(curPos * 2 + 1);
+            MyList.MyListReader reader = list.getReader(curPos);
+            result.add(Data.read_from(reader));
+            curPos = reader.read_int();
         }
 
         return result;
     }
 
-    public void saveToFile(String filename) throws IOException
+    public void save_to_file(String filename) throws IOException
     {
         FileOutputStream file = new FileOutputStream(filename);
 
         file.write(ByteBuffer.allocate(4).putInt(headers.size()).array());
+
         for (Map.Entry<String, WordInfo> entry : headers.entrySet())
         {
             ByteBuffer buffer = ByteBuffer.allocate(4 + entry.getKey().length() * 2 + 4 + 4);
@@ -123,7 +124,8 @@ public class Index implements Serializable
         }
 
         int docsCount = reader.getInt();
-        for (int i = 0; i < docsCount; ++i) {
+        for (int i = 0; i < docsCount; ++i)
+        {
             int length = reader.getInt();
             StringBuilder document = new StringBuilder();
             for (int j = 0; j < length; ++j)
@@ -133,7 +135,7 @@ public class Index implements Serializable
 
         int listSize = reader.getInt();
         for (int i = 0; i < listSize; ++i)
-            list.pushback(reader.getInt());
+            list.push_back(reader.getInt());
 
         System.out.println("Index has been loaded.");
     }
@@ -155,7 +157,44 @@ public class Index implements Serializable
         }
     }
 
-    class MyList          //C++ style vector
+
+    static class Data
+    {
+        public int document;
+        public MyList positions;
+
+        Data (int document, List<Integer> positions)
+        {
+            this.document = document;
+            this.positions = new MyList(positions.size());
+            for (int pos : positions)
+                this.positions.push_back(pos);
+        }
+
+        public static Data read_from(MyList.MyListReader from)
+        {
+            int documentNumber = from.read_int();
+            int capacity = from.read_int();
+
+            ArrayList<Integer> positions = new ArrayList<>();
+            for (int i = 0; i < capacity; i++)
+                positions.add(from.read_int());
+
+            return new Data(documentNumber, positions);
+        }
+
+        public void append_to(MyList dist)
+        {
+            dist.push_back(document);
+            dist.push_back(positions.size());
+            for (int i = 0; i < positions.size(); i++)
+                dist.push_back(positions.at(i));
+        }
+
+    }
+
+
+    static class MyList          //C++ style vector
     {
         private static final double GROWTH_COEFFICIENT = 1.6;
 
@@ -168,6 +207,12 @@ public class Index implements Serializable
             data = new int[1];
         }
 
+        public MyList(int capacity)
+        {
+            size = 0;
+            data = new int[capacity];
+        }
+
         public int size()
         {
             return size;
@@ -178,7 +223,7 @@ public class Index implements Serializable
             return data[i];
         }
 
-        public void pushback (int value)
+        public void push_back(int value)
         {
             if (size == data.length)
             {
@@ -189,6 +234,25 @@ public class Index implements Serializable
 
             data[size] = value;
             ++size;
+        }
+
+        public MyListReader getReader (int position)
+        {
+            return new MyListReader(position);
+        }
+
+        public MyListReader getReader ()
+        {
+            return getReader(0);
+        }
+
+        class MyListReader
+        {
+            private int position;
+
+            public MyListReader(int position) { this.position = position; }
+
+            public int read_int() { return MyList.this.at(position++); }
         }
     }
 }
